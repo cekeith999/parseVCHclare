@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String          @id @default(cuid())
+  name          String
+  email         String          @unique
+  password      String          // In a real app, this should be hashed
+  createdAt     DateTime        @default(now())
+  
+  familyMembers FamilyMember[]
+}
+
+model FamilyMember {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  name           String
+  relationship   String          // Mother, Father, Son, Daughter, Spouse, Other
+  dateOfBirth    DateTime
+  sex            String          // F, M, X
+  avatarSelection String?
+  createdAt      DateTime        @default(now())
+
+  insurancePlans InsurancePlan[]
+  coverageDocs   CoverageDocument[]
+  deductibles    DeductibleTracking[]
+  claims         Claim[]
+  chatHistory    ChatMessage[]
+  reminders      Reminder[]
+}
+
+model InsurancePlan {
+  id                    String          @id @default(cuid())
+  familyMemberId        String
+  familyMember          FamilyMember    @relation(fields: [familyMemberId], references: [id])
+  providerName          String
+  planName              String
+  state                 String?
+  hiosId                String?
+  planType              String?         // HMO, PPO, EPO, POS
+  annualPremium         Float?
+  monthlyPremium        Float?
+  individualDeductible  Float?
+  familyDeductible      Float?
+  individualOopMax      Float?
+  familyOopMax          Float?
+  copayPcp              Float?
+  copaySpecialist       Float?
+  copayUrgentCare       Float?
+  copayEr               Float?
+  copayTelemedicine     Float?
+  coinsurancePercentage Float?
+  prescriptionTier1Cost Float?
+  prescriptionTier2Cost Float?
+  prescriptionTier3Cost Float?
+  createdAt             DateTime        @default(now())
+
+  coverageItems         CoverageItem[]
+  deductibleTrackings   DeductibleTracking[]
+}
+
+model CoverageDocument {
+  id             String        @id @default(cuid())
+  familyMemberId String
+  familyMember   FamilyMember  @relation(fields: [familyMemberId], references: [id])
+  fileName       String
+  fileUrl        String
+  fileType       String
+  parsedContent  String?       // JSON string
+  uploadDate     DateTime      @default(now())
+}
+
+model CoverageItem {
+  id                 String        @id @default(cuid())
+  planId             String
+  plan               InsurancePlan @relation(fields: [planId], references: [id])
+  category           String        // Doctor Visits, Prescriptions, etc.
+  serviceName        String
+  isCovered          Boolean
+  coveragePercentage Float?
+  copayAmount        Float?
+  notes              String?
+  conditions         String?
+}
+
+model DeductibleTracking {
+  id              String        @id @default(cuid())
+  familyMemberId  String
+  familyMember    FamilyMember  @relation(fields: [familyMemberId], references: [id])
+  planId          String
+  plan            InsurancePlan @relation(fields: [planId], references: [id])
+  year            Int
+  amountUsed      Float
+  amountRemaining Float
+  lastUpdated     DateTime      @default(now())
+}
+
+model Claim {
+  id             String        @id @default(cuid())
+  familyMemberId String
+  familyMember   FamilyMember  @relation(fields: [familyMemberId], references: [id])
+  providerName   String
+  visitType      String
+  visitDate      DateTime
+  billedAmount   Float?
+  insurancePaid  Float?
+  patientPaid    Float?
+  status         String        // pending, processed, denied
+  notes          String?
+}
+
+model Provider {
+  id             String    @id @default(cuid())
+  name           String
+  specialty      String?
+  address        String?
+  city           String?
+  state          String?
+  zip            String?
+  latitude       Float?
+  longitude      Float?
+  phone          String?
+  npiNumber      String?
+  isInNetwork    Boolean   @default(false)
+  networkName    String?
+  nextAvailable  DateTime?
+  distanceFromUser Float?
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  familyMemberId String
+  familyMember   FamilyMember @relation(fields: [familyMemberId], references: [id])
+  role           String       // user, assistant
+  content        String
+  timestamp      DateTime     @default(now())
+}
+
+model Reminder {
+  id             String       @id @default(cuid())
+  familyMemberId String
+  familyMember   FamilyMember @relation(fields: [familyMemberId], references: [id])
+  reminderType   String       // checkup, vaccination, renewal, other
+  title          String
+  description    String?
+  dueDate        DateTime
+  isCompleted    Boolean      @default(false)
+}
